@@ -130,6 +130,10 @@
         <DCCReference Include="CyrusParser.pas"/>
         <DCCReference Include="CyrusDB.pas"/>
         <DCCReference Include="WoWPathDetector.pas"/>
+        <None Include="OrganizeItemsThroughBagSyncExport\OrganizeItemsThroughBagSyncExport.lua"/>
+        <None Include="OrganizeItemsThroughBagSyncExport\OrganizeItemsThroughBagSyncExport.lua.bak"/>
+        <None Include="OrganizeItemsThroughBagSyncExport\OrganizeItemsThroughBagSyncExport.toc"/>
+        <None Include="OrganizeItemsThroughBagSyncExport\OrganizeItemsThroughBagSyncIDs.lua"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -152,6 +156,30 @@
                 </Source>
             </Delphi.Personality>
             <Deployment Version="4">
+                <DeployFile LocalName="OrganizeItemsThroughBagSyncExport\OrganizeItemsThroughBagSyncExport.lua.bak" Configuration="Debug" Class="ProjectFile">
+                    <Platform Name="Win32">
+                        <RemoteDir>.\</RemoteDir>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="OrganizeItemsThroughBagSyncExport\OrganizeItemsThroughBagSyncExport.lua" Configuration="Debug" Class="ProjectFile">
+                    <Platform Name="Win32">
+                        <RemoteDir>.\</RemoteDir>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="OrganizeItemsThroughBagSyncExport\OrganizeItemsThroughBagSyncExport.toc" Configuration="Debug" Class="ProjectFile">
+                    <Platform Name="Win32">
+                        <RemoteDir>.\</RemoteDir>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="OrganizeItemsThroughBagSyncExport\OrganizeItemsThroughBagSyncIDs.lua" Configuration="Debug" Class="ProjectFile">
+                    <Platform Name="Win32">
+                        <RemoteDir>.\</RemoteDir>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
                 <DeployFile LocalName="Win32\Debug\OrganizeItemsThroughBagSync.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>OrganizeItemsThroughBagSync.exe</RemoteName>
