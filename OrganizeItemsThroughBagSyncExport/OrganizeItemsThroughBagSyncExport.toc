@@ -1,0 +1,8 @@
+## Interface: 120001
+## Title: OrganizeItemsThroughBagSync Item Export
+## Notes: Exports item name + bind type for a provided list of item IDs.
+## Version: 2.2
+## SavedVariables: OrganizeItemsThroughBagSyncExportDB
+
+OrganizeItemsThroughBagSyncIDs.lua
+OrganizeItemsThroughBagSyncExport.lua
