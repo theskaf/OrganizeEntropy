@@ -1,0 +1,28 @@
+# Delphi compiled output
+Win32/
+Win64/
+*.exe
+*.dcu
+*.dcp
+*.dcpil
+*.bpl
+*.map
+*.pdb
+*.res
+
+# Delphi IDE files
+__history/
+*.local
+*.identcache
+*.deployproj
+*.stat
+
+# Database and personal data
+*.db
+*.db3
+BagSync.lua
+
+# Backup files
+*.bak
+*.~pas
+*.~dfm
