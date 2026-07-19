@@ -12,7 +12,6 @@ object frmMain: TfrmMain
   Font.Style = []
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  OnResize = FormResize
   TextHeight = 15
   object PageControl1: TPageControl
     Left = 0

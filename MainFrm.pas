@@ -27,7 +27,7 @@ type
     procedure FormCreate(Sender: TObject);
     procedure btnLocateClick(Sender: TObject);
     procedure btnExecuteClick(Sender: TObject);
-    procedure FormResize(Sender: TObject);
+//    procedure FormResize(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnImportItemsClick(Sender: TObject);
 
@@ -86,11 +86,15 @@ begin
 
   memoInfo.Lines.Add('Created by Eudoxus/Khadgar-EU, your lovable troll mage ever since late vanilla/early TBC.');
   memoInfo.Lines.Add('');
+  memoInfo.Lines.Add('--');
+  memoInfo.Lines.Add('');
   memoInfo.Lines.Add('Built for Win 32-bit with Delphi 12 community edition.');
   memoInfo.Lines.Add('Based on the export of the amazing BagSync addon: https://github.com/Xruptor/BagSync');
-  memoInfo.Lines.Add('Special thanks to Xruptor for their invaluable contributions to the WoW community.');
+  memoInfo.Lines.Add('Special kudos to Xruptor for their invaluable contributions to the WoW community.');
   memoInfo.Lines.Add('Using a custom addon (OrganizeItemsThroughBagSyncExport), SQLite v3.51.2 and magic.');
   memoInfo.Lines.Add('Stay away from the Voodoo mon.');
+  memoInfo.Lines.Add('');
+  memoInfo.Lines.Add('--');
   memoInfo.Lines.Add('');
   memoInfo.Lines.Add('This tool needs your BagSync saved variables file.');
   memoInfo.Lines.Add('');
@@ -99,6 +103,16 @@ begin
   memoInfo.Lines.Add('');
   memoInfo.Lines.Add('Click "Locate BagSync.lua" to select it manually if auto-detection fails.');
   memoInfo.Lines.Add('');
+  memoInfo.Lines.Add('--- Item metadata coverage tip ---');
+  memoInfo.Lines.Add('');
+  memoInfo.Lines.Add('The companion addon (OrganizeItemsThroughBagSyncExport) only exports');
+  memoInfo.Lines.Add('metadata for items the WoW client has recently cached. To maximise');
+  memoInfo.Lines.Add('coverage before running "Import Item Data":');
+  memoInfo.Lines.Add('  1. Log in to each character you care about.');
+  memoInfo.Lines.Add('  2. Open bags, bank, reagent bank, guild bank tabs, and warband bank.');
+  memoInfo.Lines.Add('  3. Run /cie export then /reload in-game.');
+  memoInfo.Lines.Add('  4. Repeat for other characters if needed.');
+  memoInfo.Lines.Add('The more storage locations you visit, the more items get covered.');
 
   // --- Auto-detect WoW install and BagSync.lua path ---
   WoWRoot := GetRetailWoWInstallPath;
@@ -146,6 +160,10 @@ begin
       Halt;
     end;
   end;
+
+  Constraints.MinWidth  := 700;
+  Constraints.MinHeight := 550;
+  Position := poScreenCenter;
 end;
 
 procedure TfrmMain.FormDestroy(Sender: TObject);
@@ -153,11 +171,11 @@ begin
   FDatabase.Free;
 end;
 
-procedure TfrmMain.FormResize(Sender: TObject);
-begin
-  ClientWidth  := 925;
-  ClientHeight := 750;
-end;
+//procedure TfrmMain.FormResize(Sender: TObject);
+//begin
+//  ClientWidth  := 925;
+//  ClientHeight := 750;
+//end;
 
 // ---------------------------------------------------------------------------
 // INI / path helpers
