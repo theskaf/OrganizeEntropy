@@ -19,7 +19,7 @@ object frmMain: TfrmMain
     Top = 0
     Width = 925
     Height = 750
-    ActivePage = TabSheet1
+    ActivePage = TabSheet2
     Align = alClient
     TabOrder = 0
     ExplicitWidth = 923
@@ -103,6 +103,7 @@ object frmMain: TfrmMain
         Height = 720
         Align = alLeft
         TabOrder = 0
+        ExplicitHeight = 712
       end
     end
   end
