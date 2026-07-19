@@ -5,7 +5,8 @@ uses
   MainFrm in 'MainFrm.pas' {frmMain},
   CyrusParser in 'CyrusParser.pas',
   CyrusDB in 'CyrusDB.pas',
-  WoWPathDetector in 'WoWPathDetector.pas';
+  WoWPathDetector in 'WoWPathDetector.pas',
+  CyrusAddonImporter in 'CyrusAddonImporter.pas';
 
 {$R *.res}
 

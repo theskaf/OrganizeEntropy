@@ -8,7 +8,7 @@ uses
   Vcl.StdCtrls, System.IniFiles, System.StrUtils, System.DateUtils,
   Vcl.ExtCtrls, Vcl.Grids, Vcl.ComCtrls,
   System.Generics.Collections, System.IOUtils, WoWPathDetector,
-  CyrusParser, CyrusDB, System.Hash, System.UITypes;
+  CyrusParser, CyrusDB, System.Hash, System.UITypes, CyrusAddonImporter;
 
 type
   TfrmMain = class(TForm)
@@ -23,11 +23,14 @@ type
     FlowPanelGuilds: TFlowPanel;
     memoInfo: TMemo;
     StringGrid1: TStringGrid;
+    btnImportItems: TButton;
     procedure FormCreate(Sender: TObject);
     procedure btnLocateClick(Sender: TObject);
     procedure btnExecuteClick(Sender: TObject);
     procedure FormResize(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
+    procedure btnImportItemsClick(Sender: TObject);
+
 
   private
     FDatabase: TCyrusDB;
@@ -43,6 +46,8 @@ type
     procedure ClearGuilds;
     procedure AddGuildCheckbox(const GuildName: string; Count: Integer);
     function ResolveRetailWoWAccountPathTakeTwo(const WoWRoot: string): string;
+    function ResolveAddonExportPath: string;
+    procedure ExecuteAddonImport;
   public
     { Public declarations }
   end;
@@ -54,6 +59,7 @@ const
   INI_FILENAME = 'OrganizeItemsThroughBagSync.ini';
   INI_SECTION  = 'Settings';
   INI_KEY      = 'BagSyncPath';
+  INI_KEY_ADDON_PATH = 'AddonExportPath';
 
 implementation
 
@@ -296,6 +302,40 @@ begin
   end;
 end;
 
+function TfrmMain.ResolveAddonExportPath: string;
+// The addon export lives in the same SavedVariables folder as BagSync.lua
+// Path: <WoWRoot>\_retail_\WTF\Account\<AccountName>\SavedVariables\
+//       OrganizeItemsThroughBagSyncExport.lua
+const
+  ADDON_FILENAME = 'OrganizeItemsThroughBagSyncExport.lua';
+var
+  BagSyncDir : string;
+  Candidate  : string;
+begin
+  Result := '';
+
+  // Derive from the known BagSync.lua path
+  if HasValidBagSyncPath then
+  begin
+    BagSyncDir := TPath.GetDirectoryName(Edit1.Text);
+    Candidate  := TPath.Combine(BagSyncDir, ADDON_FILENAME);
+    if TFile.Exists(Candidate) then
+    begin
+      Result := Candidate;
+      Exit;
+    end;
+  end;
+
+  // Fallback: check INI
+  with TIniFile.Create(TPath.Combine(
+         TPath.GetDirectoryName(ParamStr(0)), INI_FILENAME)) do
+  try
+    Result := ReadString(INI_SECTION, INI_KEY_ADDON_PATH, '');
+  finally
+    Free;
+  end;
+end;
+
 // ---------------------------------------------------------------------------
 // WoW account path resolution
 // ---------------------------------------------------------------------------
@@ -435,6 +475,103 @@ begin
   end
   else
     memoInfo.Lines.Add('Local file missing after copy attempt.');
+end;
+
+
+
+procedure TfrmMain.btnImportItemsClick(Sender: TObject);
+begin
+  ExecuteAddonImport;
+end;
+
+procedure TfrmMain.ExecuteAddonImport;
+var
+  AddonPath   : string;
+  FileContent : string;
+  Importer    : TCyrusAddonImporter;
+  ItemCount   : Integer;
+begin
+  AddonPath := ResolveAddonExportPath;
+
+  // If auto-detect failed, prompt user
+  if not TFile.Exists(AddonPath) then
+  begin
+    with TOpenDialog.Create(Self) do
+    try
+      Title  := 'Locate OrganizeItemsThroughBagSyncExport.lua';
+      Filter := 'OrganizeItemsThroughBagSyncExport.lua|' +
+                'OrganizeItemsThroughBagSyncExport.lua|' +
+                'Lua files (*.lua)|*.lua';
+      if Execute then
+        AddonPath := FileName
+      else
+        Exit;
+    finally
+      Free;
+    end;
+  end;
+
+  // Persist path
+  with TIniFile.Create(TPath.Combine(
+         TPath.GetDirectoryName(ParamStr(0)), INI_FILENAME)) do
+  try
+    WriteString(INI_SECTION, INI_KEY_ADDON_PATH, AddonPath);
+  finally
+    Free;
+  end;
+
+  memoInfo.Lines.Add('--- Addon Item Import ---');
+  memoInfo.Lines.Add('File: ' + AddonPath);
+
+  FileContent := TFile.ReadAllText(AddonPath, TEncoding.UTF8);
+  Importer    := TCyrusAddonImporter.Create(FileContent);
+  ItemCount   := 0;
+
+  try
+    FDatabase.RebuildItemsStart; // Begin transaction (see below)
+    try
+      Importer.Execute(
+        procedure(const Item: TAddonItem)
+        begin
+          FDatabase.UpsertItem(
+            Item.ItemID,
+            Item.Name,
+            Item.Quality,
+            Item.ItemLevel,
+            Item.MinLevel,
+            Item.ItemType,
+            Item.ItemSubType,
+            Item.MaxStack,
+            Item.EquipLoc,
+            Item.ClassID,
+            Item.SubClassID,
+            Item.BindType,
+            Item.BindCategory,
+            Item.TooltipBonding,
+            Item.ExpacID,
+            Item.SetID,
+            Item.IsCraftingReagent,
+            Item.ExportedAt
+          );
+          Inc(ItemCount);
+        end
+      );
+      FDatabase.RebuildItemsCommit;
+    except
+      on E: Exception do
+      begin
+        FDatabase.RebuildItemsRollback;
+        memoInfo.Lines.Add('ERROR during item import: ' + E.Message);
+        raise;
+      end;
+    end;
+  finally
+    memoInfo.Lines.Add(Format('Items imported : %d', [ItemCount]));
+    memoInfo.Lines.Add(Format('Items skipped  : %d', [Importer.Skipped]));
+    memoInfo.Lines.Add('Item import complete.');
+
+    Importer.Free;
+  end;
 end;
 
 // ---------------------------------------------------------------------------

@@ -19,7 +19,7 @@ object frmMain: TfrmMain
     Top = 0
     Width = 925
     Height = 750
-    ActivePage = TabSheet2
+    ActivePage = TabSheet1
     Align = alClient
     TabOrder = 0
     ExplicitWidth = 923
@@ -33,7 +33,6 @@ object frmMain: TfrmMain
         Height = 457
         Align = alTop
         TabOrder = 0
-        ExplicitWidth = 915
         object Label1: TLabel
           Left = 13
           Top = 331
@@ -64,7 +63,7 @@ object frmMain: TfrmMain
           OnClick = btnLocateClick
         end
         object btnExecute: TButton
-          Left = 662
+          Left = 340
           Top = 417
           Width = 249
           Height = 25
@@ -81,6 +80,15 @@ object frmMain: TfrmMain
           ScrollBars = ssBoth
           TabOrder = 3
         end
+        object btnImportItems: TButton
+          Left = 662
+          Top = 417
+          Width = 249
+          Height = 25
+          Caption = 'Import Item Data'
+          TabOrder = 4
+          OnClick = btnImportItemsClick
+        end
       end
       object StringGrid1: TStringGrid
         Left = 0
@@ -89,8 +97,6 @@ object frmMain: TfrmMain
         Height = 263
         Align = alClient
         TabOrder = 1
-        ExplicitWidth = 915
-        ExplicitHeight = 255
       end
     end
     object TabSheet2: TTabSheet

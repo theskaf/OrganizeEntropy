@@ -26,6 +26,7 @@ type
     QInsertInventory: TFDQuery;
 
     QValidationTestONLY: TFDQuery;
+    FQUpsertItem:        TFDQuery;
 
     procedure ConfigureConnection;
     procedure CreateSchema;
@@ -44,6 +45,29 @@ type
       const ItemString: string
     );
 
+    // Upsert one item-metadata row from the companion addon export.
+    // Pass ATooltipBonding = -1 or ASetID = -1 to store NULL for those fields.
+    procedure UpsertItem(
+      AItemID             : Integer;
+      const AName         : string;
+      AQuality            : Integer;
+      AItemLevel          : Integer;
+      AMinLevel           : Integer;
+      const AItemType     : string;
+      const AItemSubType  : string;
+      AMaxStack           : Integer;
+      const AEquipLoc     : string;
+      AClassID            : Integer;
+      ASubClassID         : Integer;
+      ABindType           : Integer;
+      const ABindCategory : string;
+      ATooltipBonding     : Integer;
+      AExpacID            : Integer;
+      ASetID              : Integer;
+      AIsCraftingReagent  : Boolean;
+      const AExportedAt   : string
+    );
+
     property Connection: TFDConnection read FConnection;
 
     procedure RebuildInventoryStart;
@@ -52,6 +76,9 @@ type
 
     procedure GetTableList(AList: TStrings);
     procedure RunValidationTestONLY(const AOutput: TStrings);
+    procedure RebuildItemsStart;
+    procedure RebuildItemsCommit;
+    procedure RebuildItemsRollback;
   end;
 
 implementation
@@ -133,11 +160,69 @@ begin
     'JOIN Owners o ON i.OwnerID = o.OwnerID ' +
     'JOIN StorageTypes s ON i.StorageID = s.StorageID ' +
     'ORDER BY o.OwnerName, s.StorageName;';
+
+  // ---- Items upsert (companion addon import) ----
+  // ON CONFLICT(ItemID) updates all fields, but only when the incoming
+  // ExportedAt timestamp is >= the stored LastSeenUTC, so a stale re-run
+  // cannot overwrite a newer export.
+  FQUpsertItem := TFDQuery.Create(nil);
+  FQUpsertItem.Connection := FConnection;
+  FQUpsertItem.SQL.Text :=
+    'INSERT INTO Items ' +
+    '  (ItemID, Name, Quality, ItemLevel, MinLevel, ItemType, ItemSubType, ' +
+    '   MaxStack, EquipLoc, ClassID, SubClassID, BindType, BindCategory, ' +
+    '   TooltipBonding, ExpacID, SetID, IsCraftingReagent, ' +
+    '   FirstSeenUTC, LastSeenUTC) ' +
+    'VALUES ' +
+    '  (:ItemID, :Name, :Quality, :ItemLevel, :MinLevel, :ItemType, :ItemSubType, ' +
+    '   :MaxStack, :EquipLoc, :ClassID, :SubClassID, :BindType, :BindCategory, ' +
+    '   :TooltipBonding, :ExpacID, :SetID, :IsCraftingReagent, ' +
+    '   :ExportedAt, :ExportedAt) ' +
+    'ON CONFLICT(ItemID) DO UPDATE SET ' +
+    '  Name              = excluded.Name, ' +
+    '  Quality           = excluded.Quality, ' +
+    '  ItemLevel         = excluded.ItemLevel, ' +
+    '  MinLevel          = excluded.MinLevel, ' +
+    '  ItemType          = excluded.ItemType, ' +
+    '  ItemSubType       = excluded.ItemSubType, ' +
+    '  MaxStack          = excluded.MaxStack, ' +
+    '  EquipLoc          = excluded.EquipLoc, ' +
+    '  ClassID           = excluded.ClassID, ' +
+    '  SubClassID        = excluded.SubClassID, ' +
+    '  BindType          = excluded.BindType, ' +
+    '  BindCategory      = excluded.BindCategory, ' +
+    '  TooltipBonding    = excluded.TooltipBonding, ' +
+    '  ExpacID           = excluded.ExpacID, ' +
+    '  SetID             = excluded.SetID, ' +
+    '  IsCraftingReagent = excluded.IsCraftingReagent, ' +
+    '  LastSeenUTC       = excluded.LastSeenUTC ' +
+    'WHERE excluded.LastSeenUTC >= Items.LastSeenUTC;';
+
+  // Declare parameter types so FireDAC can prepare without needing values first
+  FQUpsertItem.ParamByName('ItemID').DataType            := ftInteger;
+  FQUpsertItem.ParamByName('Name').DataType              := ftString;
+  FQUpsertItem.ParamByName('Quality').DataType           := ftInteger;
+  FQUpsertItem.ParamByName('ItemLevel').DataType         := ftInteger;
+  FQUpsertItem.ParamByName('MinLevel').DataType          := ftInteger;
+  FQUpsertItem.ParamByName('ItemType').DataType          := ftString;
+  FQUpsertItem.ParamByName('ItemSubType').DataType       := ftString;
+  FQUpsertItem.ParamByName('MaxStack').DataType          := ftInteger;
+  FQUpsertItem.ParamByName('EquipLoc').DataType          := ftString;
+  FQUpsertItem.ParamByName('ClassID').DataType           := ftInteger;
+  FQUpsertItem.ParamByName('SubClassID').DataType        := ftInteger;
+  FQUpsertItem.ParamByName('BindType').DataType          := ftInteger;
+  FQUpsertItem.ParamByName('BindCategory').DataType      := ftString;
+  FQUpsertItem.ParamByName('TooltipBonding').DataType    := ftInteger;
+  FQUpsertItem.ParamByName('ExpacID').DataType           := ftInteger;
+  FQUpsertItem.ParamByName('SetID').DataType             := ftInteger;
+  FQUpsertItem.ParamByName('IsCraftingReagent').DataType := ftInteger;
+  FQUpsertItem.ParamByName('ExportedAt').DataType        := ftString;
 end;
 
 destructor TCyrusDB.Destroy;
 begin
   QValidationTestONLY.Free;
+  FQUpsertItem.Free;
   QInsertOwner.Free;
   QSelectOwner.Free;
   QInsertStorage.Free;
@@ -269,6 +354,7 @@ begin
   QSelectStorage.Prepare;
   QInsertInventory.Prepare;
   QValidationTestONLY.Prepare;
+  FQUpsertItem.Prepare;
 
   TempList := TStringList.Create;
   try
@@ -337,12 +423,85 @@ begin
   QInsertInventory.ExecSQL;
 end;
 
+procedure TCyrusDB.UpsertItem(
+  AItemID             : Integer;
+  const AName         : string;
+  AQuality            : Integer;
+  AItemLevel          : Integer;
+  AMinLevel           : Integer;
+  const AItemType     : string;
+  const AItemSubType  : string;
+  AMaxStack           : Integer;
+  const AEquipLoc     : string;
+  AClassID            : Integer;
+  ASubClassID         : Integer;
+  ABindType           : Integer;
+  const ABindCategory : string;
+  ATooltipBonding     : Integer;
+  AExpacID            : Integer;
+  ASetID              : Integer;
+  AIsCraftingReagent  : Boolean;
+  const AExportedAt   : string
+);
+begin
+  if AItemID <= 0 then
+    Exit;
+
+  FQUpsertItem.ParamByName('ItemID').AsInteger            := AItemID;
+  FQUpsertItem.ParamByName('Name').AsString               := AName;
+  FQUpsertItem.ParamByName('Quality').AsInteger           := AQuality;
+  FQUpsertItem.ParamByName('ItemLevel').AsInteger         := AItemLevel;
+  FQUpsertItem.ParamByName('MinLevel').AsInteger          := AMinLevel;
+  FQUpsertItem.ParamByName('ItemType').AsString           := AItemType;
+  FQUpsertItem.ParamByName('ItemSubType').AsString        := AItemSubType;
+  FQUpsertItem.ParamByName('MaxStack').AsInteger          := AMaxStack;
+  FQUpsertItem.ParamByName('EquipLoc').AsString           := AEquipLoc;
+  FQUpsertItem.ParamByName('ClassID').AsInteger           := AClassID;
+  FQUpsertItem.ParamByName('SubClassID').AsInteger        := ASubClassID;
+  FQUpsertItem.ParamByName('BindType').AsInteger          := ABindType;
+  FQUpsertItem.ParamByName('BindCategory').AsString       := ABindCategory;
+  FQUpsertItem.ParamByName('ExpacID').AsInteger           := AExpacID;
+  FQUpsertItem.ParamByName('IsCraftingReagent').AsInteger := Ord(AIsCraftingReagent);
+  FQUpsertItem.ParamByName('ExportedAt').AsString         := AExportedAt;
+
+  // NULL-able fields: -1 sentinel -> stored as NULL
+  if ATooltipBonding = -1 then
+    FQUpsertItem.ParamByName('TooltipBonding').Clear
+  else
+    FQUpsertItem.ParamByName('TooltipBonding').AsInteger := ATooltipBonding;
+
+  if ASetID = -1 then
+    FQUpsertItem.ParamByName('SetID').Clear
+  else
+    FQUpsertItem.ParamByName('SetID').AsInteger := ASetID;
+
+  FQUpsertItem.ExecSQL;
+end;
+
 procedure TCyrusDB.RebuildInventoryStart;
 begin
   FConnection.StartTransaction;
   FConnection.ExecSQL('DELETE FROM Inventory;');
   FOwnerCache.Clear;
   FStorageCache.Clear;
+end;
+
+procedure TCyrusDB.RebuildItemsCommit;
+begin
+  FConnection.Commit;
+end;
+
+procedure TCyrusDB.RebuildItemsRollback;
+begin
+  if FConnection.InTransaction then
+    FConnection.Rollback;
+end;
+
+procedure TCyrusDB.RebuildItemsStart;
+begin
+  // Does NOT delete existing rows — Items is additive/upsert only
+  // But we do wrap in a transaction for performance
+  FConnection.StartTransaction;
 end;
 
 procedure TCyrusDB.RebuildInventoryCommit;
@@ -386,7 +545,10 @@ begin
 end;
 
 procedure TCyrusDB.RunValidationTestONLY(const AOutput: TStrings);
+var
+  Qry: TFDQuery;
 begin
+  // --- Part 1: full inventory dump ---
   QValidationTestONLY.Open;
   try
     while not QValidationTestONLY.Eof do
@@ -407,6 +569,35 @@ begin
     end;
   finally
     QValidationTestONLY.Close;
+  end;
+
+  // --- Part 2: Items table coverage summary ---
+  AOutput.Add('');
+  AOutput.Add('=== Items Coverage ===');
+  Qry := TFDQuery.Create(nil);
+  try
+    Qry.Connection := FConnection;
+    Qry.SQL.Text :=
+      'SELECT ' +
+      '  COUNT(DISTINCT i.ItemID) AS TotalInventoryIDs, ' +
+      '  COUNT(DISTINCT CASE WHEN it.ItemID IS NOT NULL THEN i.ItemID END) AS CoveredByItems, ' +
+      '  COUNT(DISTINCT CASE WHEN it.ItemID IS NULL THEN i.ItemID END) AS StillMissing ' +
+      'FROM Inventory i ' +
+      'LEFT JOIN Items it ON it.ItemID = i.ItemID;';
+    Qry.Open;
+    if not Qry.Eof then
+      AOutput.Add(Format(
+        'Total distinct ItemIDs in Inventory : %d' + sLineBreak +
+        'Covered by Items table              : %d' + sLineBreak +
+        'Still missing from Items table      : %d',
+        [
+          Qry.FieldByName('TotalInventoryIDs').AsInteger,
+          Qry.FieldByName('CoveredByItems').AsInteger,
+          Qry.FieldByName('StillMissing').AsInteger
+        ]));
+    Qry.Close;
+  finally
+    Qry.Free;
   end;
 end;
 

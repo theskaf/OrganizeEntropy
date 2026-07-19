@@ -130,6 +130,7 @@
         <DCCReference Include="CyrusParser.pas"/>
         <DCCReference Include="CyrusDB.pas"/>
         <DCCReference Include="WoWPathDetector.pas"/>
+        <DCCReference Include="CyrusAddonImporter.pas"/>
         <None Include="OrganizeItemsThroughBagSyncExport\OrganizeItemsThroughBagSyncExport.lua"/>
         <None Include="OrganizeItemsThroughBagSyncExport\OrganizeItemsThroughBagSyncExport.lua.bak"/>
         <None Include="OrganizeItemsThroughBagSyncExport\OrganizeItemsThroughBagSyncExport.toc"/>
