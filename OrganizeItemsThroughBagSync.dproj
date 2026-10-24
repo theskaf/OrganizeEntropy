@@ -131,6 +131,8 @@
         <DCCReference Include="CyrusDB.pas"/>
         <DCCReference Include="WoWPathDetector.pas"/>
         <DCCReference Include="CyrusAddonImporter.pas"/>
+        <DCCReference Include="CyrusConsolidator.pas"/>
+        <DCCReference Include="CyrusAddonDeploy.pas"/>
         <None Include="OrganizeItemsThroughBagSyncExport\OrganizeItemsThroughBagSyncExport.lua"/>
         <None Include="OrganizeItemsThroughBagSyncExport\OrganizeItemsThroughBagSyncExport.lua.bak"/>
         <None Include="OrganizeItemsThroughBagSyncExport\OrganizeItemsThroughBagSyncExport.toc"/>
@@ -845,9 +847,6 @@
                         <Operation>1</Operation>
                     </Platform>
                     <Platform Name="Win64">
-                        <Operation>1</Operation>
-                    </Platform>
-                    <Platform Name="Win64x">
                         <Operation>1</Operation>
                     </Platform>
                 </DeployClass>

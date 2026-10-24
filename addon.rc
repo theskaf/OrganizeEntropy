@@ -1,0 +1,4 @@
+ABOUT_TEXT RCDATA "about.txt"
+ADDON_LUA  RCDATA "OrganizeItemsThroughBagSyncExport\\OrganizeItemsThroughBagSyncExport.lua"
+ADDON_TOC  RCDATA "OrganizeItemsThroughBagSyncExport\\OrganizeItemsThroughBagSyncExport.toc"
+ADDON_IDS  RCDATA "OrganizeItemsThroughBagSyncExport\\OrganizeItemsThroughBagSyncIDs.lua"

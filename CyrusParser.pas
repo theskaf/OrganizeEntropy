@@ -1,4 +1,4 @@
-unit CyrusParser;
+﻿unit CyrusParser;
 
 { ============================================================================
   My BagSync PARSER
@@ -304,15 +304,21 @@ begin
 end;
 
 function TCyrusEngine.GetOwnerType(const Name: string): string;
+var
+  LastCh: Char;
 begin
-  if EndsStr('©', Name) then
+  // Classify by the trailing marker character, compared by Unicode code point
+  // so the result never depends on this source file's text encoding:
+  //   U+00A9 (copyright) => Guild,  U+00A7 (section) => Warband.
+  if Name = '' then
+    Exit('Unknown');
+  LastCh := Name[Length(Name)];
+  if LastCh = #$00A9 then
     Result := 'Guild'
-  else if EndsStr('§', Name) then
+  else if LastCh = #$00A7 then
     Result := 'Warband'
-  else if Name <> '' then
-    Result := 'Character'
   else
-    Result := 'Unknown';
+    Result := 'Character';
 end;
 
 function TCyrusEngine.NormalizeStorageType(const Storage: string; const OwnerType: string): string;
@@ -388,36 +394,44 @@ var
   RawItemString: string;
 begin
   // Must be inside BagSyncDB with enough depth.
-  // Expected minimum path: [BagSyncDB][Realm][Owner][Storage][Container]
-  if FPath.Count < 5 then Exit;
+  if FPath.Count < 4 then Exit;
   if FPath[0] <> 'BagSyncDB' then Exit;
 
   Realm := FPath[1];
 
-  // Skip config sections (treated as metadata realms)
+  // Skip config sections (options, whitelist, blacklist, savedsearch, ...)
   if IsMetadataKey(Realm) then Exit;
 
-  // ----- Owner --------------------------------------------------------------
-  Owner := FPath[2];
-  OwnerType := GetOwnerType(Owner);
+  if GetOwnerType(Realm) = 'Warband' then
+  begin
+    // The account-wide Warband bank is stored at the TOP level, with no realm:
+    //   [BagSyncDB][warband-marker][tabs][tabIndex] -> item   (depth 4)
+    OwnerType := 'Warband';
+    Owner     := 'Warband';
+    Storage   := FPath[2];                 // 'tabs'
+    if IsMetadataKey(Storage) then Exit;
+    Container := FPath[3];                  // tab index
+  end
+  else
+  begin
+    // Character / Guild are nested under a realm:
+    //   [BagSyncDB][Realm][Owner][Storage][Container] -> item   (depth 5)
+    if FPath.Count < 5 then Exit;
+    Owner     := FPath[2];
+    OwnerType := GetOwnerType(Owner);
+    Storage   := FPath[3];
+    if IsMetadataKey(Storage) then Exit;
+    Container := FPath[4];
 
-  // ----- Storage ------------------------------------------------------------
-  Storage := FPath[3];
+    // Auction special case: extra "bag" nesting
+    //   [BagSyncDB][Realm][Owner][auction][bag][Container]
+    if SameText(Storage, 'auction') and
+       SameText(Container, 'bag') and
+       (FPath.Count >= 6) then
+      Container := FPath[5];
+  end;
 
-  // Skip metadata storage keys
-  if IsMetadataKey(Storage) then Exit;
-
-  // ----- Container ----------------------------------------------------------
-  Container := FPath[4];
-
-  // ----- Auction special case: extra "bag" nesting -------------------------
-  // Path: [BagSyncDB][Realm][Owner][auction][bag][Container]
-  if SameText(Storage, 'auction') and
-     SameText(Container, 'bag') and
-     (FPath.Count >= 6) then
-    Container := FPath[5];
-
-  // ----- Normalize storage name --------------------------------------------
+  // Normalize storage name (tabs -> guildtab/warbandtab, reagents -> reagentbank)
   Storage := NormalizeStorageType(Storage, OwnerType);
 
   // ----- Capture raw item string BEFORE normalization strips the suffix ----

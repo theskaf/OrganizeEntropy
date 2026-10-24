@@ -8,7 +8,7 @@
 **Language:** Delphi 12 (Community Edition)
 **Platform:** Windows (Win32)
 **Database:** SQLite via FireDAC
-**Last snapshot:** June 2026
+**Last snapshot:** October 2026
 
 ---
 
@@ -38,10 +38,11 @@ advises. You do the moving in-game.
 ### In-game (WoW side)
 1. Install **[BagSync](https://github.com/Xruptor/BagSync)** — tracks
    item locations across all your characters automatically on login/logout.
-2. Install the companion addon bundled in this repo:
-   **OrganizeItemsThroughBagSyncExport** (folder in repo root).
-   - Copy the folder to:
-     `<WoW>\\_retail_\\Interface\\AddOns\\`
+2. The companion addon **OrganizeItemsThroughBagSyncExport** is bundled *inside the
+   app* and **deployed into your AddOns folder automatically** at startup (idempotent -
+   it only writes when a file is missing or changed), so no manual copy is needed. The
+   target is derived from the detected `BagSync.lua` path:
+   `<WoW>\\_retail_\\Interface\\AddOns\\OrganizeItemsThroughBagSyncExport\\`
 3. Log in to each character whose inventory you want tracked and let
    BagSync scan (open bags, bank, guild bank).
 4. Run `/cie export` in-game, then `/reload` to flush the
@@ -75,18 +76,18 @@ OrganizeEntropy.exe (Win32, Delphi 12)
  │    └── emits TAddonItem records via callback
  ├── CyrusDB             — FireDAC/SQLite wrapper
  │    └── OrganizeEntropy.db (beside .exe, not in repo)
- └── [planned] CyrusConsolidator — move-suggestion engine
+ └── CyrusConsolidator (done) — move-suggestion engine
 ```
 
 **On "Do the magic!":**
-1. `BagSync.lua` is copied to a local working copy.
+1. `BagSync.lua` is read from the detected (or user-set) path.
 2. `TCyrusEngine` parses the entire file in a single pass.
 3. Every item found fires a callback → `InsertInventoryRow` → SQLite.
 4. All inserts are wrapped in one transaction (fast — typically < 2s
    for 50–100k rows).
 5. Stats (rows, unique IDs, total stack count) are shown in the log.
 
-**On "Import Item Data":**
+**Item metadata import (now folded into "Do the magic!" - one click does both):**
 1. `OrganizeItemsThroughBagSyncExport.lua` is located automatically
    (same `SavedVariables` folder as `BagSync.lua`) or prompted.
 2. `TCyrusAddonImporter` parses the flat item metadata table.
@@ -147,24 +148,32 @@ Items         — item metadata from companion addon export
 
 ---
 
-## Current State (June 2026)
+## Current State (Milestones A-E complete)
 
 | Area | Status |
 |------|--------|
-| Inventory parser (`CyrusParser`) | ✅ Verified working |
-| Container field (TEXT migration) | ✅ Completed |
-| Duplicate detection | ✅ Validated |
-| ItemString / quality-variant separation (Way 3) | ✅ Implemented |
-| Warband storage representation | ✅ Largely validated |
-| `CyrusAddonImporter.pas` (item metadata import) | 🔄 In progress (Milestone A) |
-| Items table population | ⚠️ Incomplete — ~6,999 inventory rows reference ItemIDs absent from `Items`; resolves once Milestone A is complete and addon re-export covers full item set |
-| Owner participation filter (checkboxes) | ⏳ Planned (Milestone B) |
-| Consolidation query engine | ⏳ Planned (Milestone C) |
-| Move suggestion detail view | ⏳ Planned (Milestone D) |
-| UX polish (async, progress, TOC check) | ⏳ Planned (Milestone E) |
-| Results UI (StringGrid, consolidation tab) | ⏳ Planned (Milestones C–D) |
+| Inventory parser (`CyrusParser`) | Working - guild/warband classification fixed (see note) |
+| Container field (TEXT migration) | Done |
+| Duplicate detection | Validated |
+| ItemString / quality-variant separation (Way 3) | Done |
+| Warband storage representation | Done - top-level `warband-marker` section handled; always included |
+| Guild classification | Fixed - owners ending in the copyright-sign marker are now Guilds (was an encoding bug that put them under Characters) |
+| `CyrusAddonImporter.pas` (item metadata import) | Done (Milestone A) |
+| Items table population | Working - upserted from the companion export; `bind_category` captured |
+| Owner participation filter (checkboxes) | Done (Milestone B) - characters + guilds, Select All/None, persisted |
+| Consolidation query engine | Done (Milestone C) - `CyrusConsolidator.pas` |
+| Move suggestion detail view | Done (Milestone D) - sources + copyable move instructions |
+| UX polish (async, progress, TOC check) | Done (Milestone E) - background parse, marquee progress, TOC check |
+| Results UI (StringGrid, consolidation tab) | Done - quality-coloured names, 7 columns (dev-only "Move?" column removed), header-click sort, resizable detail; non-movable items excluded |
+| Single action button | Done - "Do the magic!" now syncs inventory AND imports item data in one click |
+| Startup WoW scan | Async - the drive scan runs on a worker thread so the window appears instantly; the path resolves in the background |
+| Companion addon deploy | Bundled in the exe and auto-deployed to the AddOns folder at startup (idempotent); TEST/RELEASE toggle in `CyrusAddonDeploy.pas` |
+| Post-load navigation | A successful "Do the magic!" switches to the Participation tab automatically |
+| Positioning vs bag addons | About text frames this as a planner vs viewers like BagBrother / Bagnon |
 
----
+> Note: `CyrusParser.pas` is stored as UTF-8 **with BOM** so its non-ASCII marker
+> literals compile correctly; owner type is additionally compared by Unicode code
+> point so classification never depends on the source encoding again.
 
 ## Roadmap
 
@@ -258,20 +267,23 @@ The following are tracked but not scheduled for the current milestone sequence:
 | TOC version | `## Interface: 120001` in the companion addon `.toc` must be updated manually each major WoW patch, or the addon will show as "out of date". The game still loads it unless out-of-date addons are disabled. |
 | No free slot data | BagSync records items that exist, not empty slots. Empty-slot move suggestions are not yet possible without additional data. |
 | BoE/BoU equipped status | BagSync does not track whether a BoE/BoU item has already been equipped/used. The tool treats all BoE/BoU items as moveable. |
-| No real-time sync | OrganizeEntropy reads a snapshot. Also: 
+| No real-time sync | OrganizeEntropy reads a snapshot; re-run "Do the magic!" after changing things in-game to refresh. | 
 ### BagSync Data Gaps
 - **No empty slot tracking** — BagSync records items that *exist*; it does not record total bag/bank capacity or the number of empty slots per character. The consolidation engine's move suggestions will initially be limited to **co-location consolidation only** (merging stacks that already share a location). Full empty-slot move suggestions require one of: parsing bag size metadata from BagSync, user-entered slot capacities, or a future companion addon extension.
 - **BoE/BoU equipped status unknown** — BagSync does not distinguish between an unequipped BoE item (still tradeable) and one that has been equipped (now soulbound). The consolidation engine will conservatively treat all BoE/BoU items as moveable and rely on the user to verify before acting.
 - **Single Battle.net account only** — BagSync tracks one Battle.net account's WTF folder at a time. Users with multiple Battle.net accounts must set up WoW-side symlinks to merge SavedVariables folders. This is a BagSync architectural constraint, not an OrganizeEntropy one.
 ### Companion Addon (`OrganizeItemsThroughBagSyncExport`)
 - **Client cache dependency** — `C_Item.GetItemInfo` returns `nil` for items not currently in the WoW client's cache. Items not visited (bags not opened, bank not visited) since the last login will be absent from the export. The recommended workflow is: log in → open all bags → visit bank → visit guild bank → run `/cie export` → `/reload`. Repeat across characters for full coverage.
-- **TOC version must be manually updated** — The `## Interface:` line in `OrganizeItemsThroughBagSyncExport.toc` must be updated after each major WoW patch, or the addon will appear as "out of date" in the addon list. The game still loads it unless the player has explicitly disabled out-of-date addons. Automating this check is planned for Milestone E.
-- **Items table coverage** — As of the June 2026 snapshot, approximately 6,999 inventory rows reference ItemIDs absent from the `Items` table. This is expected and will resolve progressively as the companion addon export is run across more characters and sessions.
+- **TOC version** - the companion `.toc` still needs its `## Interface:` line bumped after a major patch, but the app now reads it and warns in the log when it looks out of date. The addon also records the live client interface in its export `meta.interface`.
+- **Items table coverage** — Some inventory rows may still reference ItemIDs absent from the `Items` table. This is expected and will resolve progressively as the companion addon export is run across more characters and sessions.
 ### UI / Application
-- **UI freezes during parse** — The current implementation reads and parses `BagSync.lua` synchronously on the main thread. For large accounts (files up to 10 MB, 50,000–100,000 rows), this causes a noticeable UI freeze. Async parsing via `TTask.Run` is planned for Milestone E.
-- **No results display yet** — `StringGrid1` is declared in the DFM but not yet populated. The consolidation results UI is planned for Milestone C.
-- **Guild filter checkboxes not wired** — `FlowPanelGuilds` is populated with one `TCheckBox` per guild found, but the checkboxes are not yet connected to any filtering logic. This is the core of Milestone B.
-- **`LoadFromIni` not called on startup** — The INI-persisted BagSync path is written on manual file selection but not restored on `FormCreate` (auto-detection takes precedence). Full INI round-trip for both file paths is part of Milestone E.
+- **Async parse (fixed)** - `BagSync.lua` is parsed on a background `TTask` with a marquee progress bar; the window stays responsive and is blocked from closing mid-parse.
+- **Results UI (done)** - the Consolidation tab fills `StringGrid1` with quality-coloured item names and a `Bind` column (the dev-only "Move?" column was removed), header-click sorting, and a resizable detail panel with copyable move instructions. Non-movable (bound) items are excluded from the results.
+- **Participation filter (done)** - character and guild checkboxes scope the consolidation, persist to the INI, and have Select All/None. Guilds now appear on the Guilds side and the account-wide Warband is always included.
+- **INI restored on startup (done)** - the BagSync path and the owner participation selection are restored on launch.
+- **Async startup scan (done)** - the WoW-install drive scan runs on a worker thread, so the window appears immediately; while it runs the Main tab shows "Detecting your WoW installation..." and "Do the magic!" stays disabled until the path resolves.
+- **Companion addon auto-deploy (done)** - the 3 addon files are embedded in the exe and written into the WoW AddOns folder at startup, only when missing or changed; a compile-time toggle targets a local test folder on machines without WoW.
+- **Standalone build** - the release exe statically links SQLite and links no runtime BPLs, so it runs on any Windows 10/11 PC with no Delphi, no `sqlite3.dll` and no extra DLLs.
 
 ---
 
@@ -327,7 +339,7 @@ This is a personal single-developer project. The repository is public for refere
 
 ## License
 
-See `LICENSE` in the repository root. You won't find any. 
+This tool is released under the **MIT License** - see the `LICENSE` file in the repository root (Copyright (c) 2026 @theskaf). The MIT grant covers *this application only*; the BagSync addon it reads is All Rights Reserved by Xruptor (see MUST READ below).
 
 ---
 
@@ -338,4 +350,4 @@ Read its license: https://github.com/Xruptor/BagSync/blob/master/LICENSE.md
 
 ---
 
-*README generated from project snapshot — June 2026.*
+*README generated from project snapshot — October 2026.*

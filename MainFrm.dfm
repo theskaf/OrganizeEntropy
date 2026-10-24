@@ -2,8 +2,8 @@ object frmMain: TfrmMain
   Left = 0
   Top = 0
   Caption = 'Organize Items Using BagSync addon'
-  ClientHeight = 750
-  ClientWidth = 925
+  ClientHeight = 741
+  ClientWidth = 919
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -16,22 +16,23 @@ object frmMain: TfrmMain
   object PageControl1: TPageControl
     Left = 0
     Top = 0
-    Width = 925
-    Height = 750
+    Width = 919
+    Height = 741
     ActivePage = TabSheet1
     Align = alClient
     TabOrder = 0
-    ExplicitWidth = 923
-    ExplicitHeight = 742
+    ExplicitWidth = 915
+    ExplicitHeight = 740
     object TabSheet1: TTabSheet
       Caption = '   Main   '
       object Panel1: TPanel
         Left = 0
         Top = 0
-        Width = 917
+        Width = 911
         Height = 457
         Align = alTop
         TabOrder = 0
+        ExplicitWidth = 907
         object Label1: TLabel
           Left = 13
           Top = 331
@@ -73,11 +74,12 @@ object frmMain: TfrmMain
         object memoInfo: TMemo
           Left = 1
           Top = 1
-          Width = 915
+          Width = 909
           Height = 304
           Align = alTop
           ScrollBars = ssBoth
           TabOrder = 3
+          ExplicitWidth = 905
         end
         object btnImportItems: TButton
           Left = 662
@@ -92,10 +94,12 @@ object frmMain: TfrmMain
       object StringGrid1: TStringGrid
         Left = 0
         Top = 457
-        Width = 917
-        Height = 263
+        Width = 911
+        Height = 254
         Align = alClient
         TabOrder = 1
+        ExplicitWidth = 907
+        ExplicitHeight = 253
       end
     end
     object TabSheet2: TTabSheet
@@ -105,10 +109,9 @@ object frmMain: TfrmMain
         Left = 0
         Top = 0
         Width = 281
-        Height = 720
+        Height = 711
         Align = alLeft
         TabOrder = 0
-        ExplicitHeight = 712
       end
     end
   end

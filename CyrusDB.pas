@@ -481,7 +481,13 @@ end;
 procedure TCyrusDB.RebuildInventoryStart;
 begin
   FConnection.StartTransaction;
+  // Full rebuild: Inventory is re-read from scratch each run, so the lookup
+  // tables must be rebuilt too - otherwise an owner re-classified by the parser
+  // (e.g. a guild previously stored as a character) would leave a stale,
+  // duplicate row behind. Delete Inventory first to satisfy the foreign keys.
   FConnection.ExecSQL('DELETE FROM Inventory;');
+  FConnection.ExecSQL('DELETE FROM Owners;');
+  FConnection.ExecSQL('DELETE FROM StorageTypes;');
   FOwnerCache.Clear;
   FStorageCache.Clear;
 end;
@@ -499,7 +505,7 @@ end;
 
 procedure TCyrusDB.RebuildItemsStart;
 begin
-  // Does NOT delete existing rows — Items is additive/upsert only
+  // Does NOT delete existing rows ï¿½ Items is additive/upsert only
   // But we do wrap in a transaction for performance
   FConnection.StartTransaction;
 end;

@@ -1,0 +1,40 @@
+OrganizeEntropy - a World of Warcraft inventory consolidation helper.
+Created by Eudoxus / Khadgar-EU, a lovable troll mage since late Vanilla / early TBC.
+Built for Windows 32-bit with Delphi 12 Community Edition, SQLite 3.51.2 and a bit of magic.
+
+What it does: it reads the data saved by the BagSync addon, stores every item on every character, every guild bank and the Warband bank into a local database, and then suggests how to merge partial stacks so you free up as many bag, bank and tab slots as possible.
+
+-- How this fits next to bag addons (BagBrother / Bagnon and friends) --
+Addons like BagBrother - the engine behind the Bagnon and Bagnonium bag UIs - are inventory VIEWERS: they show what each of your characters owns, offline and in tooltips, across bags, bank, guild bank and void storage, with item search and sorting. OrganizeEntropy reads that same cross-character inventory, but it is a PLANNER, not a viewer. It looks at where an item sits as partial stacks spread over many characters and works out a concrete consolidation plan: gather item X into one place so it fills a single slot instead of several, and hand you back bag, bank and tab space.
+
+Showing you where your items are and deciding what to move about them are two different jobs. A bag addon does the first; this tool does the second - it analyses slot usage across your characters and tells you exactly what to move and where. Bag viewers stop at showing.
+
+There is also a structural reason this is a separate program. An in-game addon only runs for the character you are currently logged into, and it cannot move items to your other characters for you. So the work is split in two: a small companion addon EXPORTS each character's inventory while you play, and this desktop program reads that export and COMPUTES the plan. In-game bag addons live entirely inside WoW and do not work this way.
+
+In short, it is built for hoarders - to keep some order across all your alts, banks and tabs, and claw back the slots that scattered half-stacks quietly eat up.
+
+-- Credits and licensing --
+BagSync (c) Xruptor (Andre), www.manaflux.com  -  https://github.com/Xruptor/BagSync
+  BagSync is released "All Rights Reserved": you may use it in-game under Blizzard's addon terms, but it may not be redistributed or modified without Xruptor's permission.
+  This tool only READS the SavedVariables that BagSync writes; it does not bundle, alter or redistribute BagSync in any way.
+  Full license: https://github.com/Xruptor/BagSync/blob/master/LICENSE.md
+This application (OrganizeEntropy) is distributed by @theskaf under the MIT License - see the LICENSE file shipped beside it. Special thanks to Xruptor for their work for the WoW community.
+
+-- How to use --
+1. Install BagSync. The companion addon (OrganizeItemsThroughBagSyncExport) is bundled with this tool and deployed into your AddOns folder for you.
+2. In WoW, log in to each character and open bags, bank, reagent bank, guild bank tabs and the Warband bank so the client caches them, then run  /cie export  and finally  /reload .
+3. Below, confirm the detected BagSync.lua path, then click "Do the magic!". A single click loads your inventory AND imports item details (name, stack size, bind type) together.
+4. Open the Participation tab to choose which characters and guilds take part, then go to the Consolidation tab and press "Consolidate!".
+
+Typical BagSync.lua location:
+  <WoW>\_retail_\WTF\Account\<AccountName>\SavedVariables\BagSync.lua
+
+-- Item bind types: what can actually move --
+Free / Tradeable : no binding; move it to any of your characters, or trade/sell it.
+BoE (Bind on Equip): tradeable until equipped; the moment it is equipped it becomes Soulbound.
+BoU (Bind on Use)  : tradeable until used/activated; after that it becomes Soulbound.
+BoP (Bind on Pickup): the item type "binds when picked up", so any copy already in your bags or bank is Soulbound to the character holding it and can never be moved to another character. The tool only merges such stacks within the same character.
+Warbound           : bound to your Warband - like BoE but only among YOUR OWN characters, moved through the Warband bank; it cannot be given to other players or sold at the auction house.
+Account-Bound      : movable among your own characters (mail or Warband bank), not to others.
+Quest              : quest items; treated as not movable between characters.
+Note: once a BoE/BoU item is equipped or used it turns Soulbound and can no longer be moved.

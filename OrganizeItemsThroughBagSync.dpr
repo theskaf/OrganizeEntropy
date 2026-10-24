@@ -1,15 +1,14 @@
 program OrganizeItemsThroughBagSync;
-
 uses
   Vcl.Forms,
   MainFrm in 'MainFrm.pas' {frmMain},
   CyrusParser in 'CyrusParser.pas',
   CyrusDB in 'CyrusDB.pas',
   WoWPathDetector in 'WoWPathDetector.pas',
-  CyrusAddonImporter in 'CyrusAddonImporter.pas';
-
+  CyrusAddonImporter in 'CyrusAddonImporter.pas',
+  CyrusConsolidator in 'CyrusConsolidator.pas',
+  CyrusAddonDeploy in 'CyrusAddonDeploy.pas';
 {$R *.res}
-
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
