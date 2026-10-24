@@ -19,16 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
--------------------------------------------------------------------------------
-THIRD-PARTY NOTICES
-
-This application reads data produced by the BagSync addon, which is NOT included
-in or distributed with this software. BagSync is "All Rights Reserved",
-Copyright (c) 2025 Xruptor (Andre), www.manaflux.com
-See https://github.com/Xruptor/BagSync/blob/master/LICENSE.md
-
-The MIT License above applies to OrganizeEntropy (this application) only. The bundled
-companion addon (OrganizeItemsThroughBagSyncExport), shipped inside OrganizeEntropy and
-auto-deployed to the WoW AddOns folder, is part of this application and is likewise
-covered by the MIT License above.
